@@ -12,6 +12,22 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jobplatform
+          POSTGRES_PASSWORD: jobplatform
+          POSTGRES_DB: jobplatform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jobplatform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg://jobplatform:jobplatform@localhost:5432/jobplatform
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -19,4 +35,5 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: ruff check .
+      - run: alembic upgrade head
       - run: pytest
