@@ -3,6 +3,7 @@ uvicorn[standard]
 pytest
 httpx
 ruff
+pre-commit
 sqlalchemy
 alembic
 psycopg[binary]
