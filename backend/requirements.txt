@@ -3,3 +3,7 @@ uvicorn[standard]
 pytest
 httpx
 ruff
+sqlalchemy
+alembic
+psycopg[binary]
+pydantic-settings
