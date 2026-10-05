@@ -1,5 +1,5 @@
-import sys
 import subprocess
+import sys
 import uuid
 
 from sqlalchemy.orm import Session
@@ -19,22 +19,17 @@ def process_job(job_id: str, db: Session) -> None:
     db.commit()
 
     try:
-        result = subprocess.run(
-            job.command, shell=True, capture_output=True, text=True
-        )
+        result = subprocess.run(job.command, shell=True, capture_output=True, text=True)
         if result.stdout:
             db.add(JobLog(job_id=job.id, message=result.stdout))
         if result.stderr:
             db.add(JobLog(job_id=job.id, message=result.stderr))
-        job.status = (
-            JobStatus.SUCCEEDED.value if result.returncode == 0 else JobStatus.FAILED.value
-        )
+        job.status = JobStatus.SUCCEEDED.value if result.returncode == 0 else JobStatus.FAILED.value
     except Exception as exc:
         db.add(JobLog(job_id=job.id, message=f"worker error: {exc}"))
         job.status = JobStatus.FAILED.value
 
     db.commit()
-
 
 
 def main() -> None:
