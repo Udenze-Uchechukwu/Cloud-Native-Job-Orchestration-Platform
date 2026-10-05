@@ -6,7 +6,7 @@ from app.database import settings
 
 JOB_QUEUE_KEY = "jobs:queue"
 
-redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
+redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True, socket_timeout=None)
 
 
 def enqueue_job(job_id: uuid.UUID) -> None:
