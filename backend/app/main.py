@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Job, JobLog, JobStatus
+from app.queue import enqueue_job
 from app.schemas import JobCreate, JobRead, LogRead
 
 app = FastAPI()
@@ -21,6 +22,7 @@ def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
     db.add(job)
     db.commit()
     db.refresh(job)
+    enqueue_job(job.id)
     return job
 
 

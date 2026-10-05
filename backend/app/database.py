@@ -5,6 +5,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://jobplatform:jobplatform@localhost:5432/jobplatform"
+    redis_url: str = "redis://localhost:6379/0"
 
 
 settings = Settings()
