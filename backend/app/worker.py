@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models import Job, JobLog, JobStatus
-from app.queue import dequeue_job, schedule_retry
+from app.queue import clear_retry, dequeue_job, schedule_retry
 
 MAX_RETRIES = 3
 BASE_BACKOFF_SECONDS = 2
@@ -65,6 +65,7 @@ def process_job(job_id: str, db: Session) -> None:
         backoff = BASE_BACKOFF_SECONDS * (2 ** (job.attempts - 1))
         schedule_retry(job.id, time.time() + backoff)
     else:
+        clear_retry(job.id)
         job.status = JobStatus.FAILED.value
         db.commit()
 

@@ -28,6 +28,10 @@ def schedule_retry(job_id: uuid.UUID, ready_at: float) -> None:
     redis_client.zadd(RETRY_QUEUE_KEY, {str(job_id): ready_at})
 
 
+def clear_retry(job_id: uuid.UUID) -> None:
+    redis_client.zrem(RETRY_QUEUE_KEY, str(job_id))
+
+
 def promote_ready_retries() -> int:
     now = time.time()
     ready_ids = redis_client.zrangebyscore(RETRY_QUEUE_KEY, min=0, max=now)

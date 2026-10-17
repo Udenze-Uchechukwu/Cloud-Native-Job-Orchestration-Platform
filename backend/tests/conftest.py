@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import engine, get_db
 from app.main import app
-from app.queue import JOB_QUEUE_KEY, redis_client
+from app.queue import JOB_QUEUE_KEY, RETRY_QUEUE_KEY, redis_client
 
 
 @pytest.fixture()
@@ -35,6 +35,6 @@ def client(db_session):
 
 @pytest.fixture()
 def clean_queue():
-    redis_client.delete(JOB_QUEUE_KEY)
+    redis_client.delete(JOB_QUEUE_KEY, RETRY_QUEUE_KEY)
     yield
-    redis_client.delete(JOB_QUEUE_KEY)
+    redis_client.delete(JOB_QUEUE_KEY, RETRY_QUEUE_KEY)
