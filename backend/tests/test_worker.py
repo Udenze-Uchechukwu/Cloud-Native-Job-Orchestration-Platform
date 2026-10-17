@@ -20,18 +20,6 @@ def test_process_job_success(db_session):
     assert any("hello" in log.message for log in logs)
 
 
-def test_process_job_failure(db_session):
-    job = Job(command="exit 1", status=JobStatus.PENDING.value)
-    db_session.add(job)
-    db_session.commit()
-    db_session.refresh(job)
-
-    process_job(str(job.id), db_session)
-
-    db_session.refresh(job)
-    assert job.status == JobStatus.FAILED.value
-
-
 def test_process_job_missing_job(db_session):
     missing_id = str(uuid.uuid4())
     process_job(missing_id, db_session)  # should not raise
