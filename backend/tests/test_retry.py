@@ -60,6 +60,6 @@ def test_promote_ready_retries_only_promotes_past_due(clean_queue):
 
     promoted = promote_ready_retries()
 
-    assert promoted == 1
+    assert promoted == [str(past_id)]
     assert dequeue_job(timeout=1) == str(past_id)
     assert redis_client.zscore(RETRY_QUEUE_KEY, str(future_id)) is not None

@@ -9,3 +9,4 @@ alembic
 psycopg[binary]
 pydantic-settings
 redis
+structlog

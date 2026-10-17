@@ -1,16 +1,23 @@
 import time
 
+import structlog
+
+from app.logging_config import configure_logging
 from app.queue import promote_ready_retries
+
+log = structlog.get_logger()
 
 POLL_INTERVAL_SECONDS = 1
 
 
 def main() -> None:
-    print("scheduler started, watching for ready retries...")
+    """Poll the retry set once a second, promoting anything whose backoff elapsed."""
+    configure_logging()
+    log.info("scheduler_started")
     while True:
         promoted = promote_ready_retries()
-        if promoted:
-            print(f"promoted {promoted} job(s) to the main queue")
+        for job_id in promoted:
+            log.info("retry_promoted", job_id=job_id)
         time.sleep(POLL_INTERVAL_SECONDS)
 
 
