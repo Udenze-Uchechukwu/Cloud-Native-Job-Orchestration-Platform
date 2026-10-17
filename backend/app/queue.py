@@ -1,3 +1,4 @@
+import time
 import uuid
 
 import redis
@@ -5,6 +6,7 @@ import redis
 from app.database import settings
 
 JOB_QUEUE_KEY = "jobs:queue"
+RETRY_QUEUE_KEY = "jobs:retry"
 
 redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True, socket_timeout=None)
 
@@ -20,3 +22,16 @@ def dequeue_job(timeout: int = 0) -> str | None:
         return None
     _, job_id = result
     return job_id
+
+
+def schedule_retry(job_id: uuid.UUID, ready_at: float) -> None:
+    redis_client.zadd(RETRY_QUEUE_KEY, {str(job_id): ready_at})
+
+
+def promote_ready_retries() -> int:
+    now = time.time()
+    ready_ids = redis_client.zrangebyscore(RETRY_QUEUE_KEY, min=0, max=now)
+    for job_id in ready_ids:
+        redis_client.zrem(RETRY_QUEUE_KEY, job_id)
+        redis_client.lpush(JOB_QUEUE_KEY, job_id)
+    return len(ready_ids)
