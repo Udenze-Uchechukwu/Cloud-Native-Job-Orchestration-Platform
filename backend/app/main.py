@@ -18,7 +18,11 @@ def health():
 
 @app.post("/jobs", response_model=JobRead, status_code=201)
 def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
-    job = Job(command=job_in.command, status=JobStatus.PENDING.value)
+    job = Job(
+        command=job_in.command,
+        status=JobStatus.PENDING.value,
+        timeout_seconds=job_in.timeout_seconds
+    )
     db.add(job)
     db.commit()
     db.refresh(job)
