@@ -22,7 +22,7 @@ class Job(Base):
     status = Column(String, nullable=False, default=JobStatus.PENDING.value)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    attenpts = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    attempts = Column(Integer, nullable=False, default=0, server_default=text("0"))
     timeout_seconds = Column(Integer, nullable=False, default=30, server_default=text("30"))
 
 
