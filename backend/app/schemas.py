@@ -8,7 +8,7 @@ from app.models import JobStatus
 
 class JobCreate(BaseModel):
     command: str
-    timeout_seconds: int = Field(default = 30, gt = 0)
+    timeout_seconds: int = Field(default=30, gt=0)
 
 
 class JobRead(BaseModel):

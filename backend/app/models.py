@@ -1,13 +1,16 @@
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Text, func, Integer, text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.database import Base
 
 
 class JobStatus(str, enum.Enum):
+    """The four states a job can be in. PENDING covers both "never run yet"
+    and "waiting to retry" — there's no separate "retrying" state."""
+
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     FAILED = "FAILED"
@@ -15,6 +18,9 @@ class JobStatus(str, enum.Enum):
 
 
 class Job(Base):
+    """A submitted unit of work: the command to run, its current state, and
+    how many times it's been attempted."""
+
     __tablename__ = "jobs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -27,6 +33,8 @@ class Job(Base):
 
 
 class JobLog(Base):
+    """One stdout/stderr capture from a single attempt of a job."""
+
     __tablename__ = "job_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

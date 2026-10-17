@@ -57,6 +57,7 @@ def test_promote_ready_retries_only_promotes_past_due(clean_queue):
     schedule_retry(future_id, time.time() + 1000)
 
     from app.queue import promote_ready_retries
+
     promoted = promote_ready_retries()
 
     assert promoted == 1

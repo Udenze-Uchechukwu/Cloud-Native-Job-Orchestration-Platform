@@ -13,15 +13,17 @@ app = FastAPI()
 
 @app.get("/health")
 def health():
+    """Liveness check — returns 200 if the API process is up."""
     return {"status": "ok"}
 
 
 @app.post("/jobs", response_model=JobRead, status_code=201)
 def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
+    """Create a job as PENDING and enqueue it for a worker to pick up."""
     job = Job(
         command=job_in.command,
         status=JobStatus.PENDING.value,
-        timeout_seconds=job_in.timeout_seconds
+        timeout_seconds=job_in.timeout_seconds,
     )
     db.add(job)
     db.commit()
@@ -32,6 +34,7 @@ def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
 
 @app.get("/jobs/{job_id}", response_model=JobRead)
 def get_job(job_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Fetch a job's current state."""
     job = db.get(Job, job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
@@ -40,6 +43,7 @@ def get_job(job_id: uuid.UUID, db: Session = Depends(get_db)):
 
 @app.get("/jobs/{job_id}/logs", response_model=list[LogRead])
 def get_job_logs(job_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Fetch a job's logs, oldest first — one entry per attempt's stdout/stderr."""
     job = db.get(Job, job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")

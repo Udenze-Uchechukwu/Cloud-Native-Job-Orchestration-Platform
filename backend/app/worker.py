@@ -1,9 +1,9 @@
-import subprocess
-import sys
-import uuid
 import os
 import signal
+import subprocess
+import sys
 import time
+import uuid
 
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,14 @@ BASE_BACKOFF_SECONDS = 2
 
 
 def run_command(command: str, timeout_seconds: int) -> tuple[int, str, str]:
+    """Run a shell command with a hard timeout.
+
+    Uses Popen directly (not subprocess.run) so that on timeout we can kill the
+    whole process group, not just the shell — shell=True means the shell is the
+    immediate child, and killing only it would leave anything it spawned (e.g. a
+    `sleep` inside the command) running as an orphan. start_new_session=True makes
+    the shell the leader of its own process group so os.killpg can clean up both.
+    """
     proc = subprocess.Popen(
         command,
         shell=True,
@@ -34,6 +42,14 @@ def run_command(command: str, timeout_seconds: int) -> tuple[int, str, str]:
 
 
 def process_job(job_id: str, db: Session) -> None:
+    """Run one attempt of a job and decide what happens next.
+
+    Marks the job RUNNING, executes its command (timeout counts as failure, same
+    as a nonzero exit code), then either: succeeds; schedules a retry and goes
+    back to PENDING (attempts remaining); or gives up and goes FAILED (attempts
+    exhausted). Takes `db` rather than opening its own session so it can be
+    called directly in tests with a transaction-scoped session.
+    """
     job = db.get(Job, uuid.UUID(job_id))
     if job is None:
         print(f"job {job_id} not found, skipping", file=sys.stderr)
@@ -62,6 +78,7 @@ def process_job(job_id: str, db: Session) -> None:
     if job.attempts < MAX_RETRIES:
         job.status = JobStatus.PENDING.value
         db.commit()
+        # exponential backoff: 2s, 4s, 8s, ... from BASE_BACKOFF_SECONDS
         backoff = BASE_BACKOFF_SECONDS * (2 ** (job.attempts - 1))
         schedule_retry(job.id, time.time() + backoff)
     else:
@@ -71,6 +88,7 @@ def process_job(job_id: str, db: Session) -> None:
 
 
 def main() -> None:
+    """Block on the main queue forever, processing one job at a time."""
     print("worker started, waiting for jobs...")
     while True:
         job_id = dequeue_job()
