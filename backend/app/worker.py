@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.logging_config import configure_logging
-from app.models import Job, JobLog, JobStatus
+from app.models import Job, JobLog, JobStatus, LogStream
 from app.queue import clear_retry, dequeue_job, schedule_retry
 
 log = structlog.get_logger()
@@ -70,12 +70,20 @@ def process_job(job_id: str, db: Session) -> None:
         log.error("job_execution_error", job_id=job_id, error=str(exc))
         returncode, stdout, stderr = -1, "", f"worker error: {exc}"
 
-    if stdout:
-        db.add(JobLog(job_id=job.id, message=stdout))
-    if stderr:
-        db.add(JobLog(job_id=job.id, message=stderr))
-
     job.attempts += 1
+
+    if stdout:
+        db.add(
+            JobLog(
+                job_id=job.id, message=stdout, stream=LogStream.STDOUT.value, attempt=job.attempts
+            )
+        )
+    if stderr:
+        db.add(
+            JobLog(
+                job_id=job.id, message=stderr, stream=LogStream.STDERR.value, attempt=job.attempts
+            )
+        )
 
     if returncode == 0:
         job.status = JobStatus.SUCCEEDED.value
