@@ -32,6 +32,13 @@ class Job(Base):
     timeout_seconds = Column(Integer, nullable=False, default=30, server_default=text("30"))
 
 
+class LogStream(str, enum.Enum):
+    """Which output stream a JobLog entry came from."""
+
+    STDOUT = "stdout"
+    STDERR = "stderr"
+
+
 class JobLog(Base):
     """One stdout/stderr capture from a single attempt of a job."""
 
@@ -41,3 +48,5 @@ class JobLog(Base):
     job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     message = Column(Text, nullable=False)
+    stream = Column(String, nullable=False, server_default=text("'stdout'"))
+    attempt = Column(Integer, nullable=False, server_default=text("1"))

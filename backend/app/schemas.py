@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import JobStatus
+from app.models import JobStatus, LogStream
 
 
 class JobCreate(BaseModel):
@@ -30,3 +30,5 @@ class LogRead(BaseModel):
     job_id: uuid.UUID
     timestamp: datetime
     message: str
+    stream: LogStream
+    attempt: int

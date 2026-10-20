@@ -38,12 +38,12 @@ def clear_retry(job_id: uuid.UUID) -> None:
     redis_client.zrem(RETRY_QUEUE_KEY, str(job_id))
 
 
-def promote_ready_retries() -> int:
+def promote_ready_retries() -> list[str]:
     """Move every job whose backoff has elapsed from the retry set to the main
-    queue. Returns how many were promoted. Called by the scheduler on a timer."""
+    queue. Returns the ids promoted. Called by the scheduler on a timer."""
     now = time.time()
     ready_ids = redis_client.zrangebyscore(RETRY_QUEUE_KEY, min=0, max=now)
     for job_id in ready_ids:
         redis_client.zrem(RETRY_QUEUE_KEY, job_id)
         redis_client.lpush(JOB_QUEUE_KEY, job_id)
-    return len(ready_ids)
+    return ready_ids

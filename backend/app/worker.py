@@ -5,11 +5,15 @@ import sys
 import time
 import uuid
 
+import structlog
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
-from app.models import Job, JobLog, JobStatus
+from app.logging_config import configure_logging
+from app.models import Job, JobLog, JobStatus, LogStream
 from app.queue import clear_retry, dequeue_job, schedule_retry
+
+log = structlog.get_logger()
 
 MAX_RETRIES = 3
 BASE_BACKOFF_SECONDS = 2
@@ -52,27 +56,39 @@ def process_job(job_id: str, db: Session) -> None:
     """
     job = db.get(Job, uuid.UUID(job_id))
     if job is None:
+        log.warning("job_not_found", job_id=job_id)
         print(f"job {job_id} not found, skipping", file=sys.stderr)
         return
 
     job.status = JobStatus.RUNNING.value
     db.commit()
+    log.info("job_started", job_id=job_id, command=job.command)
 
     try:
         returncode, stdout, stderr = run_command(job.command, job.timeout_seconds)
     except Exception as exc:
+        log.error("job_execution_error", job_id=job_id, error=str(exc))
         returncode, stdout, stderr = -1, "", f"worker error: {exc}"
 
-    if stdout:
-        db.add(JobLog(job_id=job.id, message=stdout))
-    if stderr:
-        db.add(JobLog(job_id=job.id, message=stderr))
-
     job.attempts += 1
+
+    if stdout:
+        db.add(
+            JobLog(
+                job_id=job.id, message=stdout, stream=LogStream.STDOUT.value, attempt=job.attempts
+            )
+        )
+    if stderr:
+        db.add(
+            JobLog(
+                job_id=job.id, message=stderr, stream=LogStream.STDERR.value, attempt=job.attempts
+            )
+        )
 
     if returncode == 0:
         job.status = JobStatus.SUCCEEDED.value
         db.commit()
+        log.info("job_succeeded", job_id=job_id, attempts=job.attempts)
         return
 
     if job.attempts < MAX_RETRIES:
@@ -81,15 +97,20 @@ def process_job(job_id: str, db: Session) -> None:
         # exponential backoff: 2s, 4s, 8s, ... from BASE_BACKOFF_SECONDS
         backoff = BASE_BACKOFF_SECONDS * (2 ** (job.attempts - 1))
         schedule_retry(job.id, time.time() + backoff)
+        log.warning(
+            "job_retry_scheduled", job_id=job_id, attempts=job.attempts, backoff_seconds=backoff
+        )
     else:
         clear_retry(job.id)
         job.status = JobStatus.FAILED.value
         db.commit()
+        log.error("job_failed", job_id=job_id, attempts=job.attempts)
 
 
 def main() -> None:
     """Block on the main queue forever, processing one job at a time."""
-    print("worker started, waiting for jobs...")
+    configure_logging()
+    log.info("worker_started")
     while True:
         job_id = dequeue_job()
         if job_id is None:
