@@ -47,3 +47,4 @@ jobs:
       - run: ruff check .
       - run: alembic upgrade head
       - run: pytest
+      - run: pytest -o addopts="" tests/api_tests
